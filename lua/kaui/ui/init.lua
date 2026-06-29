@@ -312,6 +312,36 @@ local function text_wrapped(ImGui, text)
     end
 end
 
+local function tooltip_wrap_width(ImGui)
+    if ImGui.GetFontSize then
+        local ok, font_size = pcall(ImGui.GetFontSize)
+        if ok and tonumber(font_size) then
+            return tonumber(font_size) * 28.0
+        end
+    end
+    return 420
+end
+
+local function tooltip_text(ImGui, text)
+    text = tostring(text or '')
+
+    if ImGui.PushTextWrapPos and ImGui.PopTextWrapPos then
+        ImGui.PushTextWrapPos(tooltip_wrap_width(ImGui))
+        if ImGui.TextUnformatted then
+            ImGui.TextUnformatted(text)
+        else
+            local ok = pcall(ImGui.Text, '%s', text)
+            if not ok then
+                ImGui.Text(text:gsub('%%', '%%%%'))
+            end
+        end
+        ImGui.PopTextWrapPos()
+        return
+    end
+
+    text_wrapped(ImGui, text)
+end
+
 local function tooltip(ImGui, text)
     text = tostring(text or '')
     if text == '' or not ImGui.IsItemHovered or not ImGui.IsItemHovered() then
@@ -320,7 +350,7 @@ local function tooltip(ImGui, text)
 
     if ImGui.BeginTooltip and ImGui.EndTooltip then
         ImGui.BeginTooltip()
-        text_wrapped(ImGui, text)
+        tooltip_text(ImGui, text)
         ImGui.EndTooltip()
     else
         ImGui.SetTooltip(text)
@@ -1012,7 +1042,7 @@ local function draw_section_help_mouseover(ImGui, entries)
             end
             for _, entry in ipairs(entries) do
                 ImGui.TextColored(0.35, 0.75, 1, 1, entry.key)
-                text_wrapped(ImGui, entry.value)
+                tooltip_text(ImGui, entry.value)
             end
             ImGui.EndTooltip()
         elseif ImGui.SetTooltip then
