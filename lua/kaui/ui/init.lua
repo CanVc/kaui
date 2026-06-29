@@ -854,9 +854,6 @@ local function draw_toolbar(context)
         ImGui.TextColored(0.2, 1, 0.2, 1, 'Status: ' .. tostring(ui_state.status))
     end
 
-    if structured_dirty(context) then
-        ImGui.TextColored(1, 1, 0, 1, 'Config modified: click Save to write the INI file.')
-    end
     if ui_state.raw_dirty then
         ImGui.TextColored(1, 1, 0, 1, 'Raw INI modified: click Save or Save raw.')
     end
