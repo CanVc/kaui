@@ -1117,6 +1117,23 @@ local function set_doc_value(context, section, key, value, message)
     mark_config_changed(context, message or string.format('[%s] %s updated.', section, key), false)
 end
 
+local function field_help_text(definition)
+    if not definition then
+        return ''
+    end
+
+    local description = trim(definition.description or '')
+    if definition.default ~= nil then
+        local default_text = 'Default: ' .. tostring(definition.default)
+        if description ~= '' then
+            return string.format('%s (%s)', description, default_text)
+        end
+        return '(' .. default_text .. ')'
+    end
+
+    return description
+end
+
 local function draw_field_editor(context, section, key, definition)
     local ImGui = imgui
     local config_state = context.runtime.config
@@ -1190,11 +1207,10 @@ local function draw_section_fields(context, section)
         flag_value('ImGuiTableFlags', 'Resizable')
     )
 
-    if ImGui.BeginTable and ImGui.BeginTable('KAUIFields_' .. section, 3, table_flags) then
+    if ImGui.BeginTable and ImGui.BeginTable('KAUIFields_' .. section, 2, table_flags) then
         if ImGui.TableSetupColumn then
             ImGui.TableSetupColumn('Key')
             ImGui.TableSetupColumn('Value')
-            ImGui.TableSetupColumn('Help')
             if ImGui.TableHeadersRow then
                 ImGui.TableHeadersRow()
             end
@@ -1204,16 +1220,9 @@ local function draw_section_fields(context, section)
             local definition = fields[key] or { type = 'string', default = '', description = 'Custom INI key.' }
             ImGui.TableNextColumn()
             ImGui.Text(key)
-            tooltip(ImGui, definition.description)
+            tooltip(ImGui, field_help_text(definition))
             ImGui.TableNextColumn()
             draw_field_editor(context, section, key, definition)
-            ImGui.TableNextColumn()
-            if definition.default ~= nil then
-                ImGui.TextColored(0.65, 0.65, 0.65, 1, 'Default: ' .. tostring(definition.default))
-            end
-            if definition.description and definition.description ~= '' then
-                text_wrapped(ImGui, definition.description)
-            end
         end
 
         ImGui.EndTable()
@@ -1221,6 +1230,7 @@ local function draw_section_fields(context, section)
         for _, key in ipairs(keys) do
             local definition = fields[key] or { type = 'string', default = '', description = 'Custom INI key.' }
             ImGui.Text(key)
+            tooltip(ImGui, field_help_text(definition))
             ImGui.SameLine()
             draw_field_editor(context, section, key, definition)
         end
