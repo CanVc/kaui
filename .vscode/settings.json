@@ -1,0 +1,11 @@
+{
+  "Lua.runtime.version": "Lua 5.1",
+  "Lua.diagnostics.globals": [
+    "mq",
+    "ImGui"
+  ],
+  "Lua.workspace.library": [
+    "${workspaceFolder}/lua"
+  ],
+  "Lua.workspace.checkThirdParty": false
+}
