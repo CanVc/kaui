@@ -17,6 +17,8 @@ function runtime.new(options)
         pulse_ms = options.pulse_ms or constants.DEFAULT_PULSE_MS,
         pulse_count = 0,
         started_at = os.time(),
+        args = options.args or {},
+        role_override = nil,
         timers = {
             started_at = os.time(),
             last_pulse = nil,
@@ -35,6 +37,7 @@ function runtime.new(options)
         },
         config = nil,
         config_error = nil,
+        combat = nil,
         ui = nil,
         modules = {},
         module_order = {},

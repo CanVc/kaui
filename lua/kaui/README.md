@@ -16,6 +16,7 @@ Expected MQ output:
 [KAUI][INFO] Starting KAUI / KissAssist Lua v0.5.0
 [KAUI][INFO] KissAssist INI loaded/created (...)
 [KAUI][INFO] Module loaded: core_heartbeat
+[KAUI][INFO] Module loaded: combat_assist
 [KAUI][INFO] Module loaded: ui_imgui
 [KAUI][INFO] ImGui UI initialized: /kaui show | /kaui hide
 [KAUI][INFO] Command available: /kaui help
@@ -36,6 +37,11 @@ Expected MQ output:
 /kaui pulse 500
 /kaui mode manual
 /kaui role unknown
+/kaui assist status
+/kaui assist target
+/kaui assist <main-assist-name>
+/kaui combat status
+/kaui combat assistat 90
 /kaui config status
 /kaui config save
 /kaui list status
@@ -54,6 +60,6 @@ Use `/kaui stop` to trigger a clean shutdown and `onShutdown` hooks.
 - `main.lua`: stable entrypoint.
 - `core/`: bootstrap, constants, runtime, loop, commands, MQ/TLO helpers, logging.
 - `config/`: KissAssist INI parser/save support in `mq.configDir`, typed schema, character/server file resolution, ordered lists and `[KConditions]`.
-- `modules/`: runtime module registry and `onInit`, `onPulse`, `onShutdown` hooks.
+- `modules/`: runtime module registry and `onInit`, `onPulse`, `onShutdown` hooks, including minimal assist/melee combat.
 - `ui/`: ImGui window for load/save, status and raw INI editing.
 - `utils/`: shared helpers.

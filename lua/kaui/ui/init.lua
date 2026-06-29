@@ -76,6 +76,15 @@ local EDITOR_TABS = {
             help = 'Use the KissAssist Heals entry format. Conditions are saved as a |condN suffix.',
         },
     },
+    {
+        id = 'pull',
+        label = 'Pull',
+        description = 'Pull, chain pull and advanced pull location settings.',
+        panels = {
+            { section = 'Pull', title = 'Pull settings' },
+            { section = 'PullAdvanced', title = 'Advanced pull settings' },
+        },
+    },
 }
 
 local FIELD_ORDERS = {
@@ -161,6 +170,26 @@ local FIELD_ORDERS = {
         'HealGroupPetsOn',
         'RezMeLast',
     },
+    Pull = {
+        'PullWith',
+        'PullMeleeStick',
+        'MaxRadius',
+        'MaxZRange',
+        'UseWayPointZ',
+        'PullWait',
+        'PullRadiusToUse',
+        'PullRoleToggle',
+        'ChainPull',
+        'ChainPullHP',
+        'PullPause',
+        'PullLevel',
+        'PullArcWidth',
+        'PullTwistOn',
+        'PullOnReturn',
+    },
+    PullAdvanced = {
+        'PullLocsOn',
+    },
     KConditions = {
         'ConOn',
         'CondSize',
@@ -217,6 +246,17 @@ local BOOLEAN_FIELDS = {
         XTarHeal = true,
         HealGroupPetsOn = true,
         RezMeLast = true,
+    },
+    Pull = {
+        PullMeleeStick = true,
+        UseWayPointZ = true,
+        PullRoleToggle = true,
+        ChainPull = true,
+        PullTwistOn = true,
+        PullOnReturn = true,
+    },
+    PullAdvanced = {
+        PullLocsOn = true,
     },
     KConditions = {
         ConOn = true,

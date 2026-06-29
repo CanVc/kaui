@@ -6,17 +6,17 @@ Déterminer la cible de combat et gérer l'engagement melee de base.
 
 ## Checklist des choses à faire
 
-- [ ] Lire `Role`, `AssistAt`, `MeleeOn`, `MeleeDistance`, `StickHow`.
-- [ ] Déterminer le main assist depuis commande, target ou INI.
-- [ ] Attendre le seuil HP avant engagement.
-- [ ] Activer/désactiver `/attack` proprement.
-- [ ] Gérer cible morte, invalide, mezzée ou hors range.
+- [x] Lire `Role`, `AssistAt`, `MeleeOn`, `MeleeDistance`, `StickHow`.
+- [x] Déterminer le main assist depuis commande, target ou INI.
+- [x] Attendre le seuil HP avant engagement.
+- [x] Activer/désactiver `/attack` proprement.
+- [x] Gérer cible morte, invalide, mezzée ou hors range.
 
 ## Résultats attendus
 
-- [ ] Le moteur sait quand entrer et sortir du combat.
-- [ ] Un personnage melee peut assister et attaquer une cible simple.
-- [ ] Le stop combat est propre et sans spam.
+- [x] Le moteur sait quand entrer et sortir du combat.
+- [x] Un personnage melee peut assister et attaquer une cible simple.
+- [x] Le stop combat est propre et sans spam.
 
 ## Notes
 

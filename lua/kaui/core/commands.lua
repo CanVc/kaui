@@ -1,5 +1,6 @@
 local config_manager = require('kaui.config.manager')
 local list_config = require('kaui.config.lists')
+local mq_helpers = require('kaui.core.mq')
 
 local commands = {}
 
@@ -19,8 +20,13 @@ local function normalize_args(...)
 end
 
 local function status_line(state)
+    local combat = state.combat or {}
+    local main_assist = combat.main_assist and combat.main_assist.name or '-'
+    local combat_target = combat.current_target and combat.current_target.name or '-'
+    local combat_state = combat.in_combat and 'engaged' or (combat.status_code or 'idle')
+
     return string.format(
-        'running=%s paused=%s mode=%s role=%s pulse=%dms pulses=%d me=%s target=%s',
+        'running=%s paused=%s mode=%s role=%s pulse=%dms pulses=%d me=%s target=%s combat=%s main_assist=%s combat_target=%s',
         tostring(state.running),
         tostring(state.paused),
         tostring(state.mode),
@@ -28,7 +34,10 @@ local function status_line(state)
         state.pulse_ms,
         state.pulse_count,
         state.me.name or '-',
-        state.target.name or '-'
+        state.target.name or '-',
+        combat_state,
+        main_assist,
+        combat_target
     )
 end
 
@@ -46,6 +55,138 @@ local function config_document(state, logger)
         return nil
     end
     return state.config.document
+end
+
+local function ensure_combat_state(state)
+    state.combat = state.combat or {}
+    return state.combat
+end
+
+local function target_type_key(value)
+    return tostring(value or ''):lower()
+end
+
+local function is_assist_target_type(value)
+    local key = target_type_key(value)
+    return key == 'pc' or key == 'mercenary' or key == 'pet'
+end
+
+local function handle_assist_command(state, logger, args)
+    local combat = ensure_combat_state(state)
+    local subaction = args[2] and args[2]:lower() or 'status'
+
+    if subaction == 'status' then
+        local main_assist = combat.main_assist
+        local override = combat.assist_override
+        logger.info(string.format(
+            'Main assist: %s source=%s override=%s',
+            main_assist and (main_assist.name or '-') or '-',
+            main_assist and (main_assist.source or '-') or '-',
+            override and (override.name or override.id or 'target') or '-'
+        ))
+        return
+    end
+
+    if subaction == 'clear' or subaction == 'reset' then
+        combat.assist_override = nil
+        combat.main_assist = nil
+        combat.last_assist_command = 0
+        logger.info('Main assist override cleared.')
+        return
+    end
+
+    if subaction == 'target' then
+        if not mq_helpers.is_available() then
+            logger.warn('MacroQuest is not available; target selection cannot be read.')
+            return
+        end
+
+        local target_id = mq_helpers.target_id()
+        local target_name = mq_helpers.target_name()
+        local target_type = mq_helpers.target_type()
+        if not target_id or target_id == 0 then
+            logger.warn('No target selected. Target a PC, mercenary, or pet first.')
+            return
+        end
+        if target_id == mq_helpers.me_id() then
+            logger.warn('Current target is self. Use a self-assist role such as Tank, or target another main assist.')
+            return
+        end
+        if not is_assist_target_type(target_type) then
+            logger.warn('Current target is not a valid main assist. Target a PC, mercenary, or pet.')
+            return
+        end
+
+        combat.assist_override = {
+            id = target_id,
+            name = target_name,
+            type = target_type,
+            source = 'command',
+        }
+        combat.main_assist = nil
+        logger.info(string.format('Main assist override set from target: %s (%s ID %s)', target_name or '-', target_type or '-', tostring(target_id)))
+        return
+    end
+
+    local name_start = (subaction == 'set' or subaction == 'name') and 3 or 2
+    local name = rest_as_text(args, name_start)
+    if name == '' then
+        logger.warn('Usage: /kaui assist status | target | clear | <name>')
+        return
+    end
+
+    combat.assist_override = {
+        name = name,
+        source = 'command',
+    }
+    combat.main_assist = nil
+    logger.info('Main assist override set: ' .. name)
+end
+
+local function handle_combat_command(state, logger, args)
+    local combat = ensure_combat_state(state)
+    local subaction = args[2] and args[2]:lower() or 'status'
+
+    if subaction == 'status' then
+        local settings = combat.settings or {}
+        local target = combat.current_target
+        logger.info(string.format(
+            'Combat: state=%s role=%s AssistAt=%s MeleeOn=%s MeleeDistance=%s StickHow=%s',
+            combat.in_combat and 'engaged' or (combat.status_code or 'idle'),
+            settings.role or state.role or '-',
+            tostring(settings.assist_at or '-'),
+            tostring(settings.melee_on),
+            tostring(settings.melee_distance or '-'),
+            settings.stick_how or '-'
+        ))
+        logger.info(string.format(
+            'Combat target: %s reason=%s',
+            target and (target.name or tostring(target.id)) or '-',
+            combat.status_detail or '-'
+        ))
+        return
+    end
+
+    if subaction == 'assistat' and args[3] then
+        local value = tonumber(args[3])
+        if value and value >= 1 and value <= 100 then
+            combat.assist_at_override = math.floor(value)
+            logger.info('AssistAt override set: ' .. tostring(combat.assist_at_override))
+        else
+            logger.warn('Invalid AssistAt. Use a value from 1 to 100.')
+        end
+        return
+    end
+
+    if subaction == 'reset' then
+        combat.assist_at_override = nil
+        combat.role_override = nil
+        state.role_override = nil
+        logger.info('Combat overrides cleared.')
+        return
+    end
+
+    logger.warn('Usage: /kaui combat status | assistat <1-100> | reset')
 end
 
 local function handle_list_command(state, logger, args)
@@ -176,8 +317,12 @@ function commands.handle(state, logger, ...)
     end
 
     if action == 'role' and args[2] then
-        state.role = args[2]
-        logger.info('Runtime role: ' .. state.role)
+        local role_name = rest_as_text(args, 2)
+        state.role = role_name
+        state.role_override = role_name
+        local combat = ensure_combat_state(state)
+        combat.role_override = role_name
+        logger.info('Runtime role override: ' .. state.role)
         return
     end
 
@@ -230,6 +375,16 @@ function commands.handle(state, logger, ...)
         return
     end
 
+    if action == 'assist' or action == 'ma' then
+        handle_assist_command(state, logger, args)
+        return
+    end
+
+    if action == 'combat' then
+        handle_combat_command(state, logger, args)
+        return
+    end
+
     if action == 'list' then
         handle_list_command(state, logger, args)
         return
@@ -241,7 +396,7 @@ function commands.handle(state, logger, ...)
     end
 
     if action == 'help' then
-        logger.info('Commands: /kaui status | show | hide | ui [show|hide|toggle] | pause | resume | stop | mode <name> | role <name> | pulse <ms> | config [status|save] | list [name] | cond [status|missing|set]')
+        logger.info('Commands: /kaui status | show | hide | ui [show|hide|toggle] | pause | resume | stop | mode <name> | role <name> | pulse <ms> | assist [status|target|clear|name] | combat [status|assistat|reset] | config [status|save] | list [name] | cond [status|missing|set]')
         return
     end
 

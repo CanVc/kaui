@@ -3,6 +3,7 @@ local modules = {}
 -- Future runtime modules are registered here so main.lua stays stable.
 local registry = {
     require('kaui.modules.heartbeat'),
+    require('kaui.modules.combat'),
     require('kaui.ui').create_module,
 }
 

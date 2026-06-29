@@ -21,5 +21,6 @@ if not ok_mq then
 end
 
 local app = require('kaui.core.app')
+local launch_args = { ... }
 
-return app.start({ mq = mq })
+return app.start({ mq = mq, args = launch_args })

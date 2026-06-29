@@ -20,6 +20,7 @@ function app.start(options)
         pulse_ms = options.pulse_ms,
         mode = options.mode,
         role = options.role,
+        args = options.args,
     })
     state:start()
 
