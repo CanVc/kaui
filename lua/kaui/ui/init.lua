@@ -945,6 +945,88 @@ local function is_managed_list_key(section, key)
     return false
 end
 
+local function is_help_key(key)
+    key = tostring(key or '')
+    return key == 'Help' or key:match('Help$') ~= nil
+end
+
+local function section_help_entries(config_state, section)
+    local schema = config_state.schema or config_manager.schema
+    local fields = schema.fields and schema.fields[section] or {}
+    local doc = config_state.document
+    local section_data = doc.sections[section]
+    local result = {}
+    local seen = {}
+
+    local function append(key)
+        if seen[key] or not is_help_key(key) then
+            return
+        end
+
+        local value = doc:get(section, key)
+        if value == nil and fields[key] then
+            value = fields[key].default
+        end
+        value = tostring(value or '')
+        if value == '' then
+            return
+        end
+
+        table.insert(result, {
+            key = key,
+            value = value,
+        })
+        seen[key] = true
+    end
+
+    for _, key in ipairs(FIELD_ORDERS[section] or {}) do
+        append(key)
+    end
+    for _, key in ipairs(schema.key_order and schema.key_order[section] or {}) do
+        append(key)
+    end
+    if section_data then
+        for _, key in ipairs(section_data.key_order or {}) do
+            append(key)
+        end
+        for key in pairs(section_data.values) do
+            append(key)
+        end
+    end
+
+    return result
+end
+
+local function draw_section_help_mouseover(ImGui, entries)
+    if not entries or #entries == 0 then
+        return
+    end
+
+    ImGui.TextColored(0.35, 0.75, 1, 1, 'Help (?)')
+    if ImGui.IsItemHovered and ImGui.IsItemHovered() then
+        if ImGui.BeginTooltip and ImGui.EndTooltip then
+            ImGui.BeginTooltip()
+            ImGui.Text('Section help')
+            if ImGui.Separator then
+                ImGui.Separator()
+            end
+            for _, entry in ipairs(entries) do
+                ImGui.TextColored(0.35, 0.75, 1, 1, entry.key)
+                text_wrapped(ImGui, entry.value)
+            end
+            ImGui.EndTooltip()
+        elseif ImGui.SetTooltip then
+            local lines = { 'Section help' }
+            for _, entry in ipairs(entries) do
+                table.insert(lines, entry.key .. ': ' .. entry.value)
+            end
+            ImGui.SetTooltip(table.concat(lines, '\n'))
+        end
+    end
+    ImGui.SameLine()
+    ImGui.TextColored(0.65, 0.65, 0.65, 1, 'Hover Help for KissAssist format notes.')
+end
+
 local function ordered_field_keys(config_state, section)
     local schema = config_state.schema or config_manager.schema
     local fields = schema.fields and schema.fields[section] or {}
@@ -953,14 +1035,14 @@ local function ordered_field_keys(config_state, section)
     local seen = {}
 
     for _, key in ipairs(FIELD_ORDERS[section] or {}) do
-        if fields[key] then
+        if fields[key] and not is_help_key(key) then
             table.insert(result, key)
             seen[key] = true
         end
     end
 
     for _, key in ipairs(schema.key_order and schema.key_order[section] or {}) do
-        if not seen[key] and fields[key] then
+        if not seen[key] and fields[key] and not is_help_key(key) then
             table.insert(result, key)
             seen[key] = true
         end
@@ -968,7 +1050,7 @@ local function ordered_field_keys(config_state, section)
 
     if section_data then
         for _, key in ipairs(section_data.key_order or {}) do
-            if not seen[key] and not is_managed_list_key(section, key) then
+            if not seen[key] and not is_help_key(key) and not is_managed_list_key(section, key) then
                 table.insert(result, key)
                 seen[key] = true
             end
@@ -976,7 +1058,7 @@ local function ordered_field_keys(config_state, section)
 
         local extras = {}
         for key in pairs(section_data.values) do
-            if not seen[key] and not is_managed_list_key(section, key) then
+            if not seen[key] and not is_help_key(key) and not is_managed_list_key(section, key) then
                 table.insert(extras, key)
             end
         end
@@ -1063,6 +1145,8 @@ local function draw_section_fields(context, section)
     local doc = config_state.document
 
     doc:ensure_section(section)
+
+    draw_section_help_mouseover(ImGui, section_help_entries(config_state, section))
 
     local keys = ordered_field_keys(config_state, section)
     if #keys == 0 then
